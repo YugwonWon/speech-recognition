@@ -80,7 +80,7 @@ class SpeechRecognition:
         with open(f"{output_dir}/{out_name}.txt", 'w', encoding='utf-8') as f:
             f.write(text)
             
-    def save_json(self, dict, out_name='result_json', output_dir='out/json'):
+    def save_json(self, dict, out_name='result_json', output_dir='out/json/splits'):
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         with open(f"{output_dir}/{out_name}.json", 'w', encoding='utf-8') as f:
@@ -129,6 +129,7 @@ class SpeechRecognition:
 
           # STT 결과를 텍스트 파일로 저장
           recognition.save_transcriptions(transcriptions, out_name=f'{base_name}_speaker_transcriptions')
+          print(f'{audio_path}: Done !')
     
     
     
@@ -139,5 +140,5 @@ if __name__ == '__main__':
     # 사용 예시                                          
     recognition = SpeechRecognition(acces_token=config['hf_access_key'])
     audio_files = glob.glob("./data/wav-files/*.wav")
-    print(audio_files)
+    print(f'audio files: {audio_files}')
     recognition.process_files(audio_files)
