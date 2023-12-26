@@ -1,6 +1,6 @@
 *.DS_Store
 config.json
-
+data/corpus
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
