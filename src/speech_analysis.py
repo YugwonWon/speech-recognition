@@ -23,11 +23,7 @@ class SpeechAnalysis(Praat):
         self.jpg_dir = 'out/jpg'
         if not os.path.exists(self.jpg_dir):
             os.makedirs(self.jpg_dir)
-         # 'out/excel' 디렉터리가 없으면 생성합니다.
-        self.excel_dir = 'out/excel'
-        if not os.path.exists(self.excel_dir):
-            os.makedirs(self.excel_dir)
-            
+
         # 초기화 시에 피치, 포먼트, 말하기 속도를 계산합니다.
         self.pitch = self.calculate_pitch()
         self.formants = self.calculate_formants()
@@ -38,7 +34,7 @@ class SpeechAnalysis(Praat):
         pitch = self.sound.to_pitch()
         pitch_values = pitch.selected_array['frequency']
         pitch_times = pitch.xs()
-        
+
         # 피치 값이 0이 아닌 경우만 필터링합니다.
         pitch_times = [time for time, value in zip(pitch_times, pitch_values) if value != 0]
         pitch_values = [value for value in pitch_values if value != 0]
@@ -77,32 +73,19 @@ class SpeechAnalysis(Praat):
 
     def calculate_speech_rate(self):
         """
-        발화속도(초당 음절수)와 ASD(averge syllable duration, 평균 음절 지속시간)를 구한다.
+        발화속도(초당 음절수)를 구한다.
         :param sound: parselmouth로 생성한 sound 객체
-        :return: speech_rate, pause_speech_rate, asd, n_syll
+        :return: speech_rate
         """
         threshold, threshold2, threshold3 = self.get_threshold(self.intensity, silence_db=-25)
         textgrid = self.get_textgrid(self.intensity, threshold3=threshold3, min_pause=0.3)
         num_peaks, time, sound_from_intensity_matrix = self.get_num_peaks(self.intensity)
         time_peaks, peak_count, intensities = self.get_time_peaks(num_peaks, time, sound_from_intensity_matrix, threshold)
         valid_peak_count, current_time, current_int, valid_time = self.get_valid_peak_count(time_peaks, peak_count, self.intensity, intensities, min_dip = 2)
-        speaking_time = self.get_speaking_time()
-        # to_pitch_ac(time_step: Optional[Positive[float]] = None, pitch_floor: Positive[float] = 75.0, max_number_of_candidates: Positive[int] = 15, very_accurate: bool = False, silence_threshold: float = 0.03, voicing_threshold: float = 0.45, octave_cost: float = 0.01, octave_jump_cost: float = 0.35, pitch_ceiling: Positive[float] = 600.0) → parselmouth.Pitch
-        pitch = self.sound.to_pitch_ac(0.02, 30, 4, False, 0.03, 0.25, 0.01, 0.35, 0.25, 450)
-        n_syll = 0
-        
-        for time in range(valid_peak_count):
-            query_time = valid_time[time]
-            which_interval = call(textgrid, "Get interval at time", 1, query_time)
-            which_label = call(textgrid, "Get label of interval", 1, which_interval)
-            value = pitch.get_value_at_time(query_time) 
-            if not math.isnan(value):
-                if which_label == "sounding":
-                    n_syll += 1
-                    
-        pause_speech_rate = n_syll / speaking_time
-        return pause_speech_rate
-        
+
+        speech_rate = valid_peak_count / self.sound.end_time
+        return speech_rate
+
     def plot_spectrogram(self):
         plt.figure(figsize=(10, 4))
         self.draw_spectrogram(self.sound.to_spectrogram())
@@ -123,7 +106,7 @@ class SpeechAnalysis(Praat):
         plt.title('Formants')
         plt.tight_layout()
         self.save_figure(suffix='_formants')
-        
+
     def plot_pitch(self):
         plt.figure(figsize=(10, 4))
         # self.pitch를 이용하여 피치 그래프를 그립니다.
@@ -135,7 +118,7 @@ class SpeechAnalysis(Praat):
         plt.ylim(0, self.sound.to_pitch().ceiling)
         plt.tight_layout()
         self.save_figure(suffix='_pitch')
-    
+
     def draw_spectrogram(self, spectrogram):
         x, y = spectrogram.x_grid(), spectrogram.y_grid()
         sg_db = 10 * np.log10(spectrogram.values)
@@ -143,12 +126,12 @@ class SpeechAnalysis(Praat):
         plt.ylim([spectrogram.ymin, spectrogram.ymax])
         plt.xlabel("Time [s]")
         plt.ylabel("Frequency [Hz]")
-        
+
     def save_figure(self, suffix):
         figure_path = os.path.join(self.jpg_dir, f"{self.base_name}{suffix}.jpg")
         plt.savefig(figure_path)
         plt.close()
-        
+
     def save_features_to_json(self, json_dir='out/json/features'):
         # 결과를 저장할 디렉토리가 없으면 생성합니다.
         if not os.path.exists(json_dir):
@@ -181,7 +164,7 @@ def calculate_average_features(json_dir='out/json/features'):
             for time, pitch in data["pitch"]:
                 if pitch is not None:
                     pitch_values.append(pitch)
-            
+
             # 포먼트 값들을 추가합니다.
             for formants in data["formants"]:
                 f1_values.append(formants[1])

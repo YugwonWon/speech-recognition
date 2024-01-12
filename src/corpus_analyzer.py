@@ -42,22 +42,22 @@ class CorpusAnalyzer(SpeechAnalysis):
         with open(self.user_info_file, 'r') as file:
             data = json.load(file)
             return data
-        
+
     def save_analysis_to_json(self, out_name):
         if not os.path.isdir('out/json/corpus'):
             os.mkdir('out/json/corpus')
-        with open(f'out/{out_name}.json', 'w', encoding='utf-8') as file:
+        with open(f'out/json/corpus/{out_name}.json', 'w', encoding='utf-8') as file:
             json.dump(self.results, file, ensure_ascii=False, indent=4)
 
     def get_metadata(self, meta_file:str, corpus_id:int):
         base_name = os.path.basename(meta_file).split('.')[0]
-         
+
         # 한국어방언데이터(충청,전라,제주)
         if corpus_id == 0:
             with open(meta_file, 'r') as f:
                 data = json.load(f)
             if len(data['speaker']) > 1:
-                print('speaker가 2개 이상입니다.')
+                print('speaker가 2명 이상입니다.')
             gender = data['speaker'][0]['gender']
             age = 2023 - int(data['speaker'][0]['birthYear'])
             meta_dict = {
@@ -71,12 +71,12 @@ class CorpusAnalyzer(SpeechAnalysis):
             }
         elif corpus_id == 1: # 다른 json구조를 가진 코퍼스를 추가하여 같이 처리할 수 있음
             pass
-        
-        elif corpus_id == 2: 
+
+        elif corpus_id == 2:
             pass
 
         return meta_dict
-    
+
     def analyze_speech(self, json_files, corpus_id=0):
         """
         메인 분석 함수
@@ -84,45 +84,45 @@ class CorpusAnalyzer(SpeechAnalysis):
         :param corpus_id: 코퍼스 인덱스, 인덱스에 따라 전처리한다.
         :return extract_features: 음성 feature 추출 실행
         """
-        # 낭송 데이터의 경우 json 파일 하나에 
+        # 낭송 데이터의 경우 json 파일 하나에
         # 모든 정보가 다 들어있으므로 따로 처리해야 한다.
         for json_file in tqdm(json_files):
             try:
                 base_name = os.path.basename(json_file).split('.')[0]
                 user_meta = self.get_metadata(json_file, corpus_id)
-                
+
                 self.extract_features(user_meta=user_meta, corpus_id=corpus_id)
             except:
                 print(f'error {json_file}')
                 continue
-            
+
     def extract_features(self, user_meta, corpus_id=0):
         """
         음성 특성 추출 함수
-        :param user_meta: user mata data
+        :param user_meta: user meta data
         :return analysis_results: 분석 결과 저장
         """
         analyzer = SpeechAnalysis(self.corpus_wav_dict[f'{str(corpus_id)}_wavs'][user_meta['file_name']])
         analysis_results = {
+            "meta_data": user_meta,
             "pitch": list(zip(*analyzer.pitch)),
             "formants": list(zip(*analyzer.formants)),
-            "speech_rate": analyzer.speech_rate,
-            "mata_data": user_meta
+            "speech_rate": analyzer.speech_rate
         }
         self.results.append(analysis_results)
-        
+
     def run(self):
         """
         json에 있는 id의 wav를 찾아서 음성 분석 시행
         """
         for idx, (corpus, k) in tqdm(enumerate(zip(self.corpus_list, self.corpus_json_dict.keys()))):
-            print(f'\nStart Analysis {idx}')
+            print(f'\nStart Analysis index {idx}')
             print(f'target_corpus_directory: {corpus}\nindex: {k}')
             self.analyze_speech(self.corpus_json_dict[k], corpus_id=idx)
             print(f'Finish')
             print(f'---------------------------------------------')
             self.save_analysis_to_json(f'{self.out_name}_{idx}')
-            print(f'save results {self.out_name}_{idx}')
+            print(f'save results out/json/corpus/{self.out_name}_{idx}')
             self.results = [] # 변수 초기화
 
 if __name__ == '__main__':
