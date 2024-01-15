@@ -116,7 +116,7 @@ class CorpusAnalyzer(SpeechAnalysis):
         json에 있는 id의 wav를 찾아서 음성 분석 시행
         """
         for idx, (corpus, k) in tqdm(enumerate(zip(self.corpus_list, self.corpus_json_dict.keys()))):
-            print(f'\nStart Analysis {idx}')
+            print(f'\nStart Analysis index {idx}')
             print(f'target_corpus_directory: {corpus}\nindex: {k}')
             self.analyze_speech(self.corpus_json_dict[k], corpus_id=idx)
             print(f'Finish')
