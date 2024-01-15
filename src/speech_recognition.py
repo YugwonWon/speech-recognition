@@ -13,7 +13,7 @@ class SpeechRecognition:
         # Pyannote 화자 분리 파이프라인 초기화
         self.diarization_pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization",
                                                              use_auth_token=acces_token)
-        
+        self.diarization_pipeline.to(torch.device("cuda"))
         # Whisper 모델 로드
         self.whisper_model = whisper.load_model("base")
 
@@ -137,8 +137,10 @@ if __name__ == '__main__':
     # config 파일 불러오기
     with open('config.json', 'r') as f:
         config = json.load(f)
-    # 사용 예시                                          
+    
+    # 사용 예시
     recognition = SpeechRecognition(acces_token=config['hf_access_key'])
-    audio_files = glob.glob("./data/wav-files/*.wav")
+    audio_files = glob.glob("./wav-data/wav-files/*.wav")
+    audio_files = sorted(audio_files)
     print(f'audio files: {audio_files}')
     recognition.process_files(audio_files)
