@@ -1,4 +1,5 @@
 import os
+import torch
 import glob
 import json
 import whisper
