@@ -40,8 +40,8 @@ class SpeechRecognition:
 
     def transcribe_speech(self, audio_path):
         # Whisper를 사용한 음성 인식
-        result = self.whisper_model.transcribe(audio_path)
-        return result["text"]
+        result = self.whisper_model.transcribe(audio_path, language='ko')
+        return result
     
     def split_and_save_speakers(self, audio_path, speakers_dict, output_dir='out/wav'):
         """
@@ -76,16 +76,38 @@ class SpeechRecognition:
                 f.write(transcription + "\n")
     
     def save_text(self, text, out_name='result_text', output_dir='out/txt'):
+        """
+        텍스트 파일을 지정된 디렉토리에, 지정된 이름으로 저장합니다.
+        """
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         with open(f"{output_dir}/{out_name}.txt", 'w', encoding='utf-8') as f:
             f.write(text)
             
     def save_json(self, dict, out_name='result_json', output_dir='out/json/splits'):
+        """
+        json 파일을 지정된 디렉토리에, 지정된 이름으로 저장합니다.
+        """
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         with open(f"{output_dir}/{out_name}.json", 'w', encoding='utf-8') as f:
             json.dump(dict, f, ensure_ascii=False, indent=4)
+            
+    def save_segment(self, stt_result, out_name='segment_result', output_dir='out/json/segments'):
+        """
+        stt 어절/문장 정보를 json형태로 지정된 디렉토리에, 지정된 이름으로 저장합니다.
+        """
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        result_dict = {}
+        for seg in stt_result['segments']:
+            result_dict[seg['id']] = {}
+            result_dict[seg['id']]['text'] = seg['text']
+            result_dict[seg['id']]['start'] =  seg['start']
+            result_dict[seg['id']]['end'] =  seg['end']
+            
+        with open(f'{output_dir}/{out_name}.json', 'w', encoding='utf-8') as f:
+            json.dump(result_dict, f, ensure_ascii=False, indent=4)
 
     def process_files(self, audio_files, output_dir='out'):
         """
@@ -97,23 +119,27 @@ class SpeechRecognition:
           base_name = os.path.splitext(os.path.basename(audio_path))[0]
           # 화자 분리
           # 허깅페이스 access_token 발급받아서 허깅페이스 pyannote에 등록해서 사용
-          diarization_result = recognition.separate_speakers(audio_path)
-          speaker_dict = recognition.save_sep_dict(diarization_result)
+          diarization_result = self.separate_speakers(audio_path)
+          speaker_dict = self.save_sep_dict(diarization_result)
           # 화자 분리정보 저장
-          recognition.save_json(speaker_dict, out_name=f'{base_name}_diarization_result')
+          self.save_json(speaker_dict, out_name=f'{base_name}_diarization_result')
           print(f'{audio_path}: 화자 분리 저장 완료')
 
           # speakers_dict의 음성 타임스탬프로부터 음성 잘라서 저장하기("out/wav"에 저장)
-          recognition.split_and_save_speakers(audio_path, speaker_dict, output_dir=f'{output_dir}/wav/{base_name}')
+          self.split_and_save_speakers(audio_path, speaker_dict, output_dir=f'{output_dir}/wav/{base_name}')
           print(f'{audio_path}: 음성 분할하여 WAV파일 저장 완료')
+          
           # 음성 전체에 대해서 STT 실행(data/sample_sound.wav)
-          full_text = recognition.transcribe_speech(audio_path)
-          print(f"{audio_path}: Full Audio Transcription: ", full_text)
+          stt_result = self.transcribe_speech(audio_path)
+          print(f"{audio_path}: Full Audio Transcription: ", stt_result['text'])
 
           # 텍스트 파일로 저장
-          recognition.save_text(full_text, out_name = f'{base_name}_full_text')
+          self.save_text(stt_result['text'], out_name = f'{base_name}_full_text')
           print(f'{audio_path}: 텍스트 파일 저장 완료')
-
+          
+          # segment 정보 저장
+          self.save_segment(stt_result, out_name=f'{base_name}_full_segments')
+          
           # out/wav 디렉토리에서 모든 음성 파일 불러오기
           speaker_files = glob.glob(f"out/wav/{base_name}/*.wav")
           # 파일 이름에 포함된 시간 정보를 기반으로 정렬
@@ -122,14 +148,18 @@ class SpeechRecognition:
           # 음성 잘린 파일에 대해서 STT 실행
           transcriptions = []
           print(f'{audio_path}: 잘린 음성 파일 STT 실행')
-          for speaker_audio_path in speaker_files:
-              text = recognition.transcribe_speech(speaker_audio_path)
-              transcription = f"Transcription of {speaker_audio_path}: {text}"
+          for idx, speaker_audio_path in enumerate(speaker_files):
+              stt_res = self.transcribe_speech(speaker_audio_path)
+              if stt_res['text'] == '':
+                  continue
+              # 잘린 segment 정보 저장
+              self.save_segment(stt_res, out_name=f'{base_name}_split_segments_{str(idx).zfill(3)}')
+              transcription = f"Transcription of {speaker_audio_path}: {stt_res['text']}"
               print(transcription)
               transcriptions.append(transcription)
 
           # STT 결과를 텍스트 파일로 저장
-          recognition.save_transcriptions(transcriptions, out_name=f'{base_name}_speaker_transcriptions')
+          self.save_transcriptions(transcriptions, out_name=f'{base_name}_speaker_transcriptions')
           print(f'{audio_path}: Done !')
     
     
@@ -141,7 +171,7 @@ if __name__ == '__main__':
     
     # 사용 예시
     recognition = SpeechRecognition(acces_token=config['hf_access_key'])
-    audio_files = glob.glob("./wav-data/wav-files/*.wav")
+    audio_files = glob.glob("./data/wav-files/*.wav")
     audio_files = sorted(audio_files)
     print(f'audio files: {audio_files}')
     recognition.process_files(audio_files)
