@@ -2,11 +2,10 @@
 import glob
 import os
 import json
-import math
 import parselmouth
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import find_peaks
+from tqdm import tqdm
 
 from praat import Praat
 from parselmouth.praat import call
@@ -14,7 +13,6 @@ from parselmouth.praat import call
 
 class SpeechAnalysis(Praat):
     def __init__(self, wav_path):
-        super().__init__()
         self.wav_path = wav_path
         self.sound = parselmouth.Sound(wav_path)
         self.base_name = os.path.splitext(os.path.basename(self.wav_path))[0]
@@ -128,7 +126,10 @@ class SpeechAnalysis(Praat):
         plt.ylabel("Frequency [Hz]")
 
     def save_figure(self, suffix):
-        figure_path = os.path.join(self.jpg_dir, f"{self.base_name}{suffix}.jpg")
+        sub_dir = os.path.join(self.jpg_dir, self.base_name)
+        if not os.path.exists(sub_dir):
+            os.makedirs(sub_dir)
+        figure_path = os.path.join(sub_dir, f"{self.base_name}{suffix}.jpg")
         plt.savefig(figure_path)
         plt.close()
 
@@ -181,17 +182,22 @@ def calculate_average_features(json_dir='out/json/features'):
     
     
 if __name__ == '__main__':
-    wave_files = glob.glob('out/wav/sample_sound/*.wav')  # 필요시 WAV 파일의 경로를 수정합니다.
-    for wave_file in wave_files:
-        analyzer = SpeechAnalysis(wave_file)
-        analyzer.plot_spectrogram()
-        analyzer.plot_formants()
-        analyzer.plot_pitch()
-        analyzer.save_features_to_json()
-        print(f"Estimated speech rate for {wave_file}: {analyzer.speech_rate} syllable per second")
-        
+    wave_files = glob.glob('out/split-wav/**/*.wav', recursive=True)  # 필요시 WAV 파일의 경로를 수정합니다.
+    print("음성 분석 시작")
+    for wave_file in tqdm(wave_files, desc='Total Wavs'):
+        try:
+            analyzer = SpeechAnalysis(wave_file)
+            analyzer.plot_spectrogram()
+            analyzer.plot_formants()
+            analyzer.plot_pitch()
+            analyzer.save_features_to_json()
+            print(f"음성 분석 완료: {wave_file}")
+        except Exception as e:
+            print(f'Error SpeechAnalysis for {wave_file}: {e}')
+            
     # 함수 호출 예시
-    average_pitch, average_f1, average_f2, average_f3 = calculate_average_features()
+    print("전체 음성에 대한 통계 산출")
+    average_pitch, average_f1, average_f2, average_f3 = calculate_average_features(json_dir='out/json/features')
     print("Average Pitch:", average_pitch)
     print("Average F1:", average_f1)
     print("Average F2:", average_f2)

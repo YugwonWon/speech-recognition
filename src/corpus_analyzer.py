@@ -57,7 +57,8 @@ class CorpusAnalyzer(SpeechAnalysis):
             with open(meta_file, 'r') as f:
                 data = json.load(f)
             if len(data['speaker']) > 1:
-                print('speaker가 2명 이상입니다.')
+                pass
+                # print(f'speaker가 2명 이상입니다. {data['filename']}')
             gender = data['speaker'][0]['gender']
             age = 2023 - int(data['speaker'][0]['birthYear'])
             meta_dict = {
@@ -88,12 +89,10 @@ class CorpusAnalyzer(SpeechAnalysis):
         # 모든 정보가 다 들어있으므로 따로 처리해야 한다.
         for json_file in tqdm(json_files):
             try:
-                base_name = os.path.basename(json_file).split('.')[0]
                 user_meta = self.get_metadata(json_file, corpus_id)
-
                 self.extract_features(user_meta=user_meta, corpus_id=corpus_id)
-            except:
-                print(f'error {json_file}')
+            except Exception as e:
+                print(f'Error Analyze Speech for {json_file}: {e}')
                 continue
 
     def extract_features(self, user_meta, corpus_id=0):

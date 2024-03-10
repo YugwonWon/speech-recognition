@@ -27,11 +27,12 @@ pip install -r requirements.txt
 ## 사전 준비사항2(HuggingFace Access Key 등록)
 
 - [허깅페이스 홈페이지](https://huggingface.co/) 접속
-
 - 이메일과 비밀번호(대문자, 소문자, 숫자 포함)를 입력하고 회원가입을 합니다.
+- https://hf.co/pyannote/segmentation
 - https://huggingface.co/pyannote/segmentation-3.0
+- https://huggingface.co/pyannote/speaker-diarization
 - https://huggingface.co/pyannote/speaker-diarization-3.1
-- 위의 두 사이트에 접속하여 login -> `대학, 대학교 주소` 정보를 입력하고 동의합니다.
+- 위의 사이트에 접속하여 login -> `대학, 대학교 주소` 정보를 입력하고 동의합니다.
 - https://huggingface.co/settings/tokens 에 접속하여 `New Token`을 눌러 access key를 생성합니다.
 - 파일 목록에 있는 `config.json`에 해당 키를 입력하고 `ctrl+s`를 눌러 파일을 저장합니다.
 
